@@ -9,6 +9,8 @@ print("Matrix A:\n", A)
 b = np.loadtxt("vector.txt", delimiter=' ', dtype=np.float)
 if np.shape(b)[0]!=n:
 	print("Error. Check text files and try again. Bye...")
+	f = open('answer.txt', 'w')
+	f.write("Error. Check matrix.txt and vector.txt and try again.")
 	quit()
 print("Vector b:", b)
 

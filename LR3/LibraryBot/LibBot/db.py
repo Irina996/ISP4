@@ -12,7 +12,7 @@ class db(object):
 
 
 	@staticmethod
-	def _search_book_title(title):
+	def search_book_title(title):
 
 		conn = db._db_connection()
 		cursor = conn.cursor()
@@ -35,7 +35,7 @@ class db(object):
 
 
 	@staticmethod
-	def _get_author(author_id):
+	def get_author(author_id):
 
 		conn = db._db_connection()
 		cursor = conn.cursor()
@@ -58,7 +58,7 @@ class db(object):
 
 
 	@staticmethod
-	def _search_author_books(author_id):
+	def search_author_books(author_id):
 
 		conn = db._db_connection()
 		cursor = conn.cursor()
@@ -81,7 +81,7 @@ class db(object):
 
 
 	@staticmethod
-	def _search_author(surname, name):
+	def search_author(surname, name):
 
 		conn = db._db_connection()
 		cursor = conn.cursor()
@@ -104,7 +104,30 @@ class db(object):
 
 
 	@staticmethod
-	def _get_genre(genre_id):
+	def search_book(title, author_id):
+
+		conn = db._db_connection()
+		cursor = conn.cursor()
+
+		try:
+			cursor.execute('{call [dbo].[searchBook](?, ?)}', [title, author_id])
+			result_set = cursor.fetchone()
+
+			if result_set:
+				return result_set
+
+			else:
+				return None
+
+		except Exception:
+			return None
+
+		finally:
+			cursor.close()
+
+
+	@staticmethod
+	def get_genre(genre_id):
 
 		conn = db._db_connection()
 		cursor = conn.cursor()
@@ -127,7 +150,7 @@ class db(object):
 
 
 	@staticmethod
-	def _is_authorized(user_id):
+	def is_authorized(user_id):
 
 		conn = db._db_connection()
 		cursor = conn.cursor()
@@ -150,7 +173,7 @@ class db(object):
 
 
 	@staticmethod
-	def _get_reader_id(surname, phone):
+	def get_reader_id(surname, phone):
 
 		conn = db._db_connection()
 		cursor = conn.cursor()
@@ -168,7 +191,7 @@ class db(object):
 
 
 	@staticmethod
-	def _add_telegram_reader(reader_id, telegram_id):
+	def add_telegram_reader(reader_id, telegram_id):
 
 		conn = db._db_connection()
 		cursor = conn.cursor()
@@ -188,7 +211,7 @@ class db(object):
 
 
 	@staticmethod
-	def _add_reader(surname, name, patronymic, address, phone_number):
+	def add_reader(surname, name, patronymic, address, phone_number):
 
 		conn = db._db_connection()
 		cursor = conn.cursor()
@@ -196,6 +219,106 @@ class db(object):
 		try:
 			sql = '{call [dbo].[addReader](?, ?, ?, ?, ?)}'
 			values = (surname, name, patronymic, address, phone_number)
+			cursor.execute(sql, (values))
+			conn.commit()
+			return True
+
+		except Exception:
+			return False
+
+		finally:
+			cursor.close()
+
+
+	@staticmethod
+	def get_list_of_reader_books(offset, count, reader_id):
+
+		conn = db._db_connection()
+		cursor = conn.cursor()
+
+		try:
+			cursor.execute('{call [dbo].[getListOfReaderBooks](?, ?, ?)}', [offset, count, reader_id])
+			result_set = cursor.fetchall()
+
+			if result_set:
+				return result_set
+
+			else:
+				return None
+
+		except Exception:
+			return None
+
+		finally:
+			cursor.close()
+
+
+	@staticmethod
+	def get_telegram_reader(user_id):
+
+		conn = db._db_connection()
+		cursor = conn.cursor()
+
+		try:
+			cursor.execute('{call [dbo].[searchTelegramReader](?)}', [user_id])
+			result = cursor.fetchone()
+
+			return result
+
+		except Exception:
+			return None
+
+		finally:
+			cursor.close()
+
+
+	@staticmethod
+	def pay_audio_book(reader_id, book_id):
+
+		conn = db._db_connection()
+		cursor = conn.cursor()
+
+		try:
+			cursor.execute('call [dbo].[payAudioBook](?, ?)', [reader_id, book_id])
+			conn.commit()
+			return True
+
+		except Exception:
+			return False
+
+		finally:
+			cursor.close()
+
+
+	@staticmethod
+	def change_reader(reader_id, surname, name, patronymic, address, phone):
+
+		conn = db._db_connection()
+		cursor = conn.cursor()
+
+		try:
+			sql = '{call [dbo].[changeReaderInfo](?, ?, ?, ?, ?, ?)}'
+			values = (reader_id, surname, name, patronymic, address, phone)
+			cursor.execute(sql, (values))
+			conn.commit()
+			return True
+
+		except Exception:
+			return False
+
+		finally:
+			cursor.close()
+
+
+	@staticmethod
+	def delete_telegram_reader(reader_id):
+
+		conn = db._db_connection()
+		cursor = conn.cursor()
+
+		try:
+			sql = '{call [dbo].[deleteTelegramReader](?)}'
+			values = (reader_id)
 			cursor.execute(sql, (values))
 			conn.commit()
 			return True

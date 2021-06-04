@@ -127,7 +127,7 @@ STATIC_URL = '/static/'
 
 
 # Bot settings.
-TOKEN = '1889205992:AAEGQMh0Pan4n4l8-fg2cLuJFYU75gaRfuw'
+TOKEN = #TOKEN
 
 
 # Default primary key field type

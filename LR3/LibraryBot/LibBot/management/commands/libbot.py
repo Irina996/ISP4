@@ -36,12 +36,26 @@ class Command(BaseCommand):
 			bot.send_message(message.from_user.id, f'Введите пароль')
 
 
+		# make a newsletter
+		@bot.message_handler(commands=['notification'])
+		def make_notification(message):
+
+			if not self.admin == message.from_user.id:
+				bot.send_message(message.from_user.id, f'Не понимаю, что это значит.')
+				return
+
+			bot.send_message(message.from_user.id, 'Введите информацию, которую хотите разослать читателям.')
+			self._user_state.update({f'{message.from_user.id}':f'notification'})
+
+
 		# add librarian (for admin)
 		@bot.message_handler(commands=['add_librarian'])
 		def add_librarian(message):
 
 			if not self.admin == message.from_user.id:
 				bot.send_message(message.from_user.id, f'Не понимаю, что это значит.')
+				return
+
 			bot.send_message(message.from_user.id, f'Введите данные по шаблону:\nФамилия Имя Отчество '+
 				   f'Адрес Номер_телефона Пароль_библиотекаря.')
 			self._user_state.update({f'{message.from_user.id}':f'add_librarian'})
@@ -53,6 +67,8 @@ class Command(BaseCommand):
 
 			if not self.admin == message.from_user.id:
 				bot.send_message(message.from_user.id, f'Не понимаю, что это значит.')
+				return
+
 			bot.send_message(message.from_user.id, f'Введите фамилию и пароль библиотекаря через пробел')
 			self._user_state.update({f'{message.from_user.id}':f'del_librarian'})
 
@@ -70,7 +86,7 @@ class Command(BaseCommand):
 		@bot.message_handler(commands=['change'])
 		def change_reader_info(message):
 
-			reader_set = db.get_telegram_reader(message.from_user.id)
+			reader_set = db.search_telegram_reader(message.from_user.id)
 
 			if reader_set is None:
 				bot.send_message(message.from_user.id, 'Сначала авторизуйтесь.')
@@ -85,7 +101,7 @@ class Command(BaseCommand):
 		@bot.message_handler(commands=['delete'])
 		def delete_reader(message):
 
-			reader_set = db.get_telegram_reader(message.from_user.id)
+			reader_set = db.search_telegram_reader(message.from_user.id)
 
 			if reader_set is None:
 				bot.send_message(message.from_user.id, 'Вы не авторизованы')
@@ -118,7 +134,7 @@ class Command(BaseCommand):
 		@bot.message_handler(commands=['mybooks'])
 		def search_author_books(message):
 
-			reader_set = db.get_telegram_reader(message.from_user.id)
+			reader_set = db.search_telegram_reader(message.from_user.id)
 
 			if reader_set is None:
 				bot.send_message(message.from_user.id, 'Сначала авторизуйтесь.')
@@ -170,6 +186,16 @@ class Command(BaseCommand):
 
 				self.admin = message.from_user.id
 				bot.send_message(message.from_user.id, 'Вы успешно авторизованы как админ')
+
+			# make notifications
+			elif state == 'notification':
+
+				id_set = db.get_telegram_readers_id()
+				for row in id_set:
+					for id in row:
+						bot.send_message(id, message.text)
+
+				bot.send_message(message.from_user.id, 'Рассылка произведена успешно.')
 
 			# add librarian (for admin)
 			elif state == 'add_librarian':
@@ -273,7 +299,7 @@ class Command(BaseCommand):
 			# reader changes information about himself
 			elif state == 'change':
 
-				reader_set = db.get_telegram_reader(message.from_user.id)
+				reader_set = db.search_telegram_reader(message.from_user.id)
 
 				reader_id = reader_set[0]
 				text = message.text.split(' ')

@@ -254,7 +254,7 @@ class db(object):
 
 
 	@staticmethod
-	def get_telegram_reader(user_id):
+	def search_telegram_reader(user_id):
 
 		conn = db._db_connection()
 		cursor = conn.cursor()
@@ -347,6 +347,24 @@ class db(object):
 
 		except Exception:
 			return False
+
+		finally:
+			cursor.close()
+
+
+	@staticmethod
+	def get_telegram_readers_id():
+
+		conn = db._db_connection()
+		cursor = conn.cursor()
+
+		try:
+			cursor.execute('{call [dbo].[getTelegramReaderId]}')
+			result = cursor.fetchall()
+			return result
+
+		except Exception:
+			return None
 
 		finally:
 			cursor.close()

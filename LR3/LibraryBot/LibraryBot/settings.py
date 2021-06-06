@@ -127,10 +127,13 @@ STATIC_URL = '/static/'
 
 
 # Bot settings.
-TOKEN = 'Люк, я твой отец)'
+TOKEN = '1889205992:AAEGQMh0Pan4n4l8-fg2cLuJFYU75gaRfuw'
 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 # DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# admin password
+ADMIN_PSWD = 1111

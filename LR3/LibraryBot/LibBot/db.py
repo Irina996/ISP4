@@ -273,24 +273,6 @@ class db(object):
 
 
 	@staticmethod
-	def pay_audio_book(reader_id, book_id):
-
-		conn = db._db_connection()
-		cursor = conn.cursor()
-
-		try:
-			cursor.execute('call [dbo].[payAudioBook](?, ?)', [reader_id, book_id])
-			conn.commit()
-			return True
-
-		except Exception:
-			return False
-
-		finally:
-			cursor.close()
-
-
-	@staticmethod
 	def change_reader(reader_id, surname, name, patronymic, address, phone):
 
 		conn = db._db_connection()
@@ -319,6 +301,46 @@ class db(object):
 		try:
 			sql = '{call [dbo].[deleteTelegramReader](?)}'
 			values = (reader_id)
+			cursor.execute(sql, (values))
+			conn.commit()
+			return True
+
+		except Exception:
+			return False
+
+		finally:
+			cursor.close()
+
+
+	@staticmethod
+	def add_librarian(surname, name, patronymic, address, phone, pswd):
+
+		conn = db._db_connection()
+		cursor = conn.cursor()
+
+		try:
+			sql = '{call [dbo].[addLibrarian](?, ?, ?, ?, ?, ?)}'
+			values = (surname, name, patronymic, address, phone, pswd)
+			cursor.execute(sql, (values))
+			conn.commit()
+			return True
+
+		except Exception:
+			return False
+
+		finally:
+			cursor.close()
+
+
+	@staticmethod
+	def del_librarian(surname, pswd):
+
+		conn = db._db_connection()
+		cursor = conn.cursor()
+
+		try:
+			sql = '{call [dbo].[deleteLibrarian](?, ?)}'
+			values = (surname, pswd)
 			cursor.execute(sql, (values))
 			conn.commit()
 			return True

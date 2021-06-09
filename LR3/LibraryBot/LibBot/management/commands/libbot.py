@@ -3,6 +3,10 @@ from LibraryBot import settings
 import telebot
 from ...models import Book, Author, Genre
 from ...db import db
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
@@ -34,6 +38,19 @@ class Command(BaseCommand):
 
 			self._user_state.update({f'{message.from_user.id}':f'admin'})
 			bot.send_message(message.from_user.id, f'Введите пароль')
+
+
+		# write commands of admin
+		@bot.message_handler(commands=['admin_commands'])
+		def get_admin_rights(message):
+
+			if not self.admin == message.from_user.id:
+				bot.send_message(message.from_user.id, f'Не понимаю, что это значит.')
+				return
+
+			bot.send_message(message.from_user.id, f'notification - Разослать сообщения читателям\n'+
+					'add_librarian - Добавить библиотекаря\n'+
+					'del_librarian - Удалить библиотекаря')
 
 
 		# make a newsletter
@@ -162,229 +179,233 @@ class Command(BaseCommand):
 		# bot-user enter some text
 		@bot.message_handler(content_types=['text'])
 		def get_text_messages(message):
+			try:
 
-			state = self._user_state.get(f'{message.from_user.id}')
+				state = self._user_state.get(f'{message.from_user.id}')
 
-			# say hello
-			if message.text.lower().find('привет') != -1 and message.text.find('?') == -1:
-				bot.send_message(message.from_user.id, 'Привет!')
+				# say hello
+				if message.text.lower().find('привет') != -1 and message.text.find('?') == -1:
+					bot.send_message(message.from_user.id, 'Привет!')
 
-			# get rights of admin
-			elif state == 'admin':
+				# get rights of admin
+				elif state == 'admin':
 
-				text = message.text
+					text = message.text
 
-				try:
-					pswd = int(text)
-				except ValueError:
-					bot.send_message(message.from_user.id, 'Пароль должен быть числом')
-					return
+					try:
+						pswd = int(text)
+					except ValueError:
+						bot.send_message(message.from_user.id, 'Пароль должен быть числом')
+						return
 
-				if not self.is_pswd_correct(pswd):
-					bot.send_message(message.from_user.id, 'Неверный пароль')
-					return
+					if not self.is_pswd_correct(pswd):
+						bot.send_message(message.from_user.id, 'Неверный пароль')
+						return
 
-				self.admin = message.from_user.id
-				bot.send_message(message.from_user.id, 'Вы успешно авторизованы как админ')
+					self.admin = message.from_user.id
+					bot.send_message(message.from_user.id, 'Вы успешно авторизованы как админ')
 
-			# make notifications
-			elif state == 'notification':
+				# make notifications
+				elif state == 'notification':
 
-				id_set = db.get_telegram_readers_id()
-				for row in id_set:
-					for id in row:
-						bot.send_message(id, message.text)
+					id_set = db.get_telegram_readers_id()
+					for row in id_set:
+						for id in row:
+							bot.send_message(id, message.text)
 
-				bot.send_message(message.from_user.id, 'Рассылка произведена успешно.')
+					bot.send_message(message.from_user.id, 'Рассылка произведена успешно.')
 
-			# add librarian (for admin)
-			elif state == 'add_librarian':
+				# add librarian (for admin)
+				elif state == 'add_librarian':
 
-				text = message.text.split(' ')
+					text = message.text.split(' ')
 
-				try:
-					surname = text[0]
-					name = text[1]
-					patronymic = text[2]
-					address = text[3]
-					phone = int(text[4])
-					pswd = int(text[5])
-					pswd ^= 9512; # encrypt pswd 
+					try:
+						surname = text[0]
+						name = text[1]
+						patronymic = text[2]
+						address = text[3]
+						phone = int(text[4])
+						pswd = int(text[5])
+						pswd ^= 9512; # encrypt pswd 
 
-				except IndexError:
-					bot.send_message(message.from_user.id, 'Неправильный ввод.')
-					bot.send_message(message.from_user.id, f'Введите данные по шаблону:\nФамилия '+
-					  'Имя Отчество Адрес Номер_телефона.')
-					return
+					except IndexError:
+						bot.send_message(message.from_user.id, 'Неправильный ввод.')
+						bot.send_message(message.from_user.id, f'Введите данные по шаблону:\nФамилия '+
+						  'Имя Отчество Адрес Номер_телефона.')
+						return
 
-				except ValueError:
-					bot.send_message(message.from_user.id, 'Неправильный ввод. Номер телефона '+
-					  'и пароль должены быть числами')
-					return
+					except ValueError:
+						bot.send_message(message.from_user.id, 'Неправильный ввод. Номер телефона '+
+						  'и пароль должены быть числами')
+						return
 
-				self._user_state.pop(f'{message.from_user.id}')
+					self._user_state.pop(f'{message.from_user.id}')
 
-				if db.add_librarian(surname, name, patronymic, address, phone, pswd):
-					bot.send_message(message.from_user.id, 'Библиотекарь добавлен.')
-				else:
-					bot.send_message(message.from_user.id, 'Ошибка. Библиотекарь не добавлен.')
+					if db.add_librarian(surname, name, patronymic, address, phone, pswd):
+						bot.send_message(message.from_user.id, 'Библиотекарь добавлен.')
+					else:
+						bot.send_message(message.from_user.id, 'Ошибка. Библиотекарь не добавлен.')
 
-			# delete librarian (for admin)
-			elif state == 'del_librarian':
+				# delete librarian (for admin)
+				elif state == 'del_librarian':
 
-				text = message.text.split(' ')
+					text = message.text.split(' ')
 
-				try:
-					surname = text[0]
-					pswd = int(text[1])
-					pswd ^= 9512; # decrypt pswd
+					try:
+						surname = text[0]
+						pswd = int(text[1])
+						pswd ^= 9512; # decrypt pswd
 
-				except IndexError:
-					bot.send_message(message.from_user.id, 'Неправильный ввод.')
-					bot.send_message(message.from_user.id, f'Введите фамилию и пароль библиотекаря через пробел.')
-					return
+					except IndexError:
+						bot.send_message(message.from_user.id, 'Неправильный ввод.')
+						bot.send_message(message.from_user.id, f'Введите фамилию и пароль библиотекаря через пробел.')
+						return
 
-				except ValueError:
-					bot.send_message(message.from_user.id, 'Неправильный ввод. Пароль должен быть числом.')
-					return
+					except ValueError:
+						bot.send_message(message.from_user.id, 'Неправильный ввод. Пароль должен быть числом.')
+						return
 
-				self._user_state.pop(f'{message.from_user.id}')
+					self._user_state.pop(f'{message.from_user.id}')
 
-				if db.del_librarian(surname, pswd):
-					bot.send_message(message.from_user.id, 'Библиотекарь удален.')
-				else:
-					bot.send_message(message.from_user.id, 'Ошибка. Библиотекарь не был удален.')
+					if db.del_librarian(surname, pswd):
+						bot.send_message(message.from_user.id, 'Библиотекарь удален.')
+					else:
+						bot.send_message(message.from_user.id, 'Ошибка. Библиотекарь не был удален.')
 
-			# authorization for readers
-			elif state == 'authorize':
+				# authorization for readers
+				elif state == 'authorize':
 
-				text = message.text.split(' ')
+					text = message.text.split(' ')
 
-				try:
-					surname = text[0]
-					name = text[1]
-					patronymic = text[2]
-					address = text[3]
-					phone = int(text[4])
+					try:
+						surname = text[0]
+						name = text[1]
+						patronymic = text[2]
+						address = text[3]
+						phone = int(text[4])
 
-				except IndexError:
-					bot.send_message(message.from_user.id, 'Неправильный ввод.')
-					bot.send_message(message.from_user.id, f'Введите данные по шаблону:\nФамилия '+
-					 'Имя Отчество Адрес Номер_телефона.')
-					return
+					except IndexError:
+						bot.send_message(message.from_user.id, 'Неправильный ввод.')
+						bot.send_message(message.from_user.id, f'Введите данные по шаблону:\nФамилия '+
+						 'Имя Отчество Адрес Номер_телефона.')
+						return
 
-				except ValueError:
-					bot.send_message(message.from_user.id, 'Неправильный ввод. Номер телефона должен быть числом')
-					return
+					except ValueError:
+						bot.send_message(message.from_user.id, 'Неправильный ввод. Номер телефона должен быть числом')
+						return
 
-				self._user_state.pop(f'{message.from_user.id}')
+					self._user_state.pop(f'{message.from_user.id}')
 
-				if db.is_authorized(message.from_user.id):
-					bot.send_message(message.from_user.id, 'Вы уже авторизованы.')
-
-				else:
-					# authorization
-					reader_id = db.get_reader_id(surname, phone)
-
-					if reader_id != 0:
-						result = db.add_telegram_reader(reader_id, message.from_user.id)
+					if db.is_authorized(message.from_user.id):
+						bot.send_message(message.from_user.id, 'Вы уже авторизованы.')
 
 					else:
-						db.add_reader(surname, name, patronymic, address, phone)
+						# authorization
 						reader_id = db.get_reader_id(surname, phone)
-						result = db.add_telegram_reader(reader_id, message.from_user.id)
-					bot.send_message(message.from_user.id, 'Авторизация прошла успешно. '+
-					  f'Ваш пароль {reader_id*1000 + int(phone/10000)}.')
 
-			# reader changes information about himself
-			elif state == 'change':
+						if reader_id != 0:
+							result = db.add_telegram_reader(reader_id, message.from_user.id)
 
-				reader_set = db.search_telegram_reader(message.from_user.id)
+						else:
+							db.add_reader(surname, name, patronymic, address, phone)
+							reader_id = db.get_reader_id(surname, phone)
+							result = db.add_telegram_reader(reader_id, message.from_user.id)
+						bot.send_message(message.from_user.id, 'Авторизация прошла успешно. '+
+						  f'Ваш пароль {reader_id*1000 + int(phone/10000)}.')
 
-				reader_id = reader_set[0]
-				text = message.text.split(' ')
+				# reader changes information about himself
+				elif state == 'change':
 
-				try:
-					surname = text[0]
-					name = text[1]
-					patronymic = text[2]
-					address = text[3]
-					phone = int(text[4])
+					reader_set = db.search_telegram_reader(message.from_user.id)
 
-				except IndexError:
-					bot.send_message(message.from_user.id, 'Неправильный ввод.')
-					bot.send_message(message.from_user.id, f'Введите данные по шаблону:\nФамилия Имя '+
-					  'Отчество Адрес Номер_телефона.')
-					return
+					reader_id = reader_set[0]
+					text = message.text.split(' ')
 
-				except ValueError:
-					bot.send_message(message.from_user.id, 'Неправильный ввод. Номер телефона должен быть числом')
-					return
+					try:
+						surname = text[0]
+						name = text[1]
+						patronymic = text[2]
+						address = text[3]
+						phone = int(text[4])
 
-				self._user_state.pop(f'{message.from_user.id}')
+					except IndexError:
+						bot.send_message(message.from_user.id, 'Неправильный ввод.')
+						bot.send_message(message.from_user.id, f'Введите данные по шаблону:\nФамилия Имя '+
+						  'Отчество Адрес Номер_телефона.')
+						return
 
-				if db.change_reader(reader_id, surname, name, patronymic, address, phone):
-					bot.send_message(message.from_user.id, 'Информация изменена успешно. '+
-					  f'Ваш пароль {reader_id*1000 + int(phone/10000)}.')
-				else:
-					bot.send_message(message.from_user.id, 'Ошибка. Информация не изменена')
+					except ValueError:
+						bot.send_message(message.from_user.id, 'Неправильный ввод. Номер телефона должен быть числом')
+						return
 
-			# display a list of books with the entered title
-			elif state == 'book':
-				self._user_state.pop(f'{message.from_user.id}')
-				book_set = db.search_book_title(message.text)
+					self._user_state.pop(f'{message.from_user.id}')
 
-				if book_set is None:
-					bot.send_message(message.from_user.id, 'В библиотеке нет книг с таким названием.')
-					return
+					if db.change_reader(reader_id, surname, name, patronymic, address, phone):
+						bot.send_message(message.from_user.id, 'Информация изменена успешно. '+
+						  f'Ваш пароль {reader_id*1000 + int(phone/10000)}.')
+					else:
+						bot.send_message(message.from_user.id, 'Ошибка. Информация не изменена')
 
-				for book_list in book_set:
+				# display a list of books with the entered title
+				elif state == 'book':
+					self._user_state.pop(f'{message.from_user.id}')
+					book_set = db.search_book_title(message.text)
+
+					if book_set is None:
+						bot.send_message(message.from_user.id, 'В библиотеке нет книг с таким названием.')
+						return
+
+					for book_list in book_set:
+						author = Author()
+						author.from_list(db.get_author(book_list[2]))
+						genre = Genre()
+						genre.from_list(db.get_genre(book_list[3]))
+						book = Book()
+						book.from_list(book_list, author, genre)
+						bot.send_message(message.from_user.id, str(book))
+
+				# display list of books with enterd author
+				elif state == 'author':
+
+					try:
+						space = message.text.find(' ')
+						surname = message.text[0: space]
+						name = message.text[space + 1: len(message.text)]
+
+					except IndexError:
+						bot.send_message(message.from_user.id, 'Введите фамилию и имя автора через пробел') 
+						return
+
+					self._user_state.pop(f'{message.from_user.id}')
+					author_set = db.search_author(surname, name)
+					author_id = 0
+
+					if author_set is None or author_set[0] == 0:
+						bot.send_message(message.from_user.id, 'Нет такого автора') 
+						return
+
+					else:
+						author_id = author_set[0]
+
 					author = Author()
-					author.from_list(db.get_author(book_list[2]))
-					genre = Genre()
-					genre.from_list(db.get_genre(book_list[3]))
-					book = Book()
-					book.from_list(book_list, author, genre)
-					bot.send_message(message.from_user.id, str(book))
-
-			# display list of books with enterd author
-			elif state == 'author':
-
-				try:
-					space = message.text.find(' ')
-					surname = message.text[0: space]
-					name = message.text[space + 1: len(message.text)]
-
-				except IndexError:
-					bot.send_message(message.from_user.id, 'Введите фамилию и имя автора через пробел') 
-					return
-
-				self._user_state.pop(f'{message.from_user.id}')
-				author_set = db.search_author(surname, name)
-				author_id = 0
-
-				if author_set is None or author_set[0] == 0:
-					bot.send_message(message.from_user.id, 'Нет такого автора') 
-					return
-
-				else:
-					author_id = author_set[0]
-
-				author = Author()
-				author.author_id = author_id
-				author.surname = surname
-				author.name = name
-				book_set = db.search_author_books(author_set[0])
+					author.author_id = author_id
+					author.surname = surname
+					author.name = name
+					book_set = db.search_author_books(author_set[0])
 				
-				for book_list in book_set:
-					genre = Genre()
-					genre.from_list(db.get_genre(book_list[3]))
-					book = Book()
-					book.from_list(book_list, author, genre)
-					bot.send_message(message.from_user.id, str(book)) 
+					for book_list in book_set:
+						genre = Genre()
+						genre.from_list(db.get_genre(book_list[3]))
+						book = Book()
+						book.from_list(book_list, author, genre)
+						bot.send_message(message.from_user.id, str(book)) 
 
-			# bot don't know what user want
-			else:
-				bot.send_message(message.from_user.id, 'Не понимаю, что это значит.')
+				# bot don't know what user want
+				else:
+					bot.send_message(message.from_user.id, 'Не понимаю, что это значит.')
+
+			except Exception as e:
+				logging.exception(e)
 
 		bot.polling(none_stop=True)

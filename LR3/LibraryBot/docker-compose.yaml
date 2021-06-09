@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+    db:
+        image: mcr.microsoft.com/mssql/server
+        volumes:
+            - ./data/db:/var/lib/mssql/data
+        environment:
+            - ACCEPT_EULA: Y
+
+    web:
+        build: .
+        command: python manage.py libbot
+        volumes:
+            - .:/LibraryBot
+        ports:
+            - "8000:8000"
+
+        depends_on:
+            - db

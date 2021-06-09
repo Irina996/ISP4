@@ -5,11 +5,11 @@ services:
         volumes:
             - ./data/db:/var/lib/mssql/data
         environment:
-            - ACCEPT_EULA: Y
+            - ACCEPT_EULA=Y
 
     web:
-        build: .
-        command: python manage.py libbot
+        image: irina996/lr4:lr4
+        command: sh -c "python manage.py libbot"
         volumes:
             - .:/LibraryBot
         ports:
